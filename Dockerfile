@@ -1,20 +1,7 @@
-# Use Bun base image
-FROM oven/bun:latest
-
-# Set the working directory inside the container
+FROM oven/bun:1
 WORKDIR /app
-
-# Copy package.json before installing dependencies
-COPY package.json ./
-
-# Install project dependencies
-RUN bun install
-
-# Copy the rest of the application files
-COPY . .
-
-# Expose port
+COPY package.json bun.lock* ./
+RUN bun install --production
+COPY src ./src
 EXPOSE 3000
-
-# Start the application
-CMD ["bun", "run", "start"]
+CMD ["bun", "src/app.ts"]

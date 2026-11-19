@@ -1,42 +1,24 @@
-<div align="center">
-<img src="./public/favicon.ico" alt="hack.af logo" width="100" height="100">
-<h1>hack.af</h1>
-<a href="https://hackclub.com">Hack Club</a>’s Link Shortener
-</div>
+# Shortlinks
 
-## Quick Start (Development)
+EEHS Hack Club's link shortener: `eehshack.club/go/{slug}` redirects to wherever the slug points. Adapted from Hack Club's [hack.af](https://github.com/hackclub/hack.af).
 
-1. Clone the repository:
+- **Add, change or delete links** at `eehshack.club/go/admin` (asks for `ADMIN_PASSWORD`; any username works).
+- **Unknown slugs** redirect to `FALLBACK_URL` (the club homepage by default).
+- The `links` table is created automatically on startup.
 
-   ```fish
-   git clone https://hackclub.com/hackclub/hack.af.git
-   cd hack.af
-   ```
+## Running locally
 
-2. Install dependencies:
+```sh
+bun install
+cp .env.example .env   # then set ADMIN_PASSWORD
+bun run db             # starts Postgres in Docker
+bun dev                # http://localhost:3000/go/admin
+```
 
-   ```fish
-   bun i
-   ```
+## Hosting
 
-3. Clone `.env.example` to `.env` and fill in the required environment variables.
-
-4. Start the postgres db:
-
-   ```fish
-   bun run docker-dev
-   ```
-
-5. Start the development server!
-
-   ```fish
-   bun dev
-   ```
-
-## Usage
-
-All links are routed through a 302 (Temporary Redirect). Simply visit `hack.af/slug` to get redirected. 404's are pointed to `hackclub.com/404`.
+Runs on Orchard in the Services project. The ingress sends `eehshack.club/go/` to this app, and everything else on `eehshack.club` still goes to the website.
 
 ## License
 
-This project is released under [the MIT license](LICENSE).
+MIT, see [LICENSE](LICENSE).

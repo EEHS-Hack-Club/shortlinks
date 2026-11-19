@@ -1,33 +1,43 @@
 import pg from "pg";
 
-const connectionString = process.env.DATABASE_URL;
+export const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
-async function connectToDatabase() {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      const client = new pg.Client({
-        connectionString,
-      });
-      await client.connect();
-      console.log("Connected to the database successfully");
-      return client;
-    } catch (error) {
-      console.error(`Database connection attempt ${attempt + 1} failed:`, error);
-      const delay = Math.pow(2, attempt) * 1000;
-      console.log(`Retrying in ${delay / 1000} seconds...`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
+export type Link = { slug: string; destination: string; clicks: number; created_at: Date };
 
-  throw new Error("Failed to connect to the database after 5 attempts.");
+export async function setupDatabase() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS links (
+      slug        TEXT PRIMARY KEY,
+      destination TEXT NOT NULL,
+      clicks      INTEGER NOT NULL DEFAULT 0,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
 }
 
-export let client: pg.Client;
-export async function initializeDatabase() {
-  try {
-    client = await connectToDatabase();
-  } catch (error) {
-    console.error("Could not establish a database connection:", error);
-    process.exit(1);
-  }
+export async function listLinks(): Promise<Link[]> {
+  const res = await db.query("SELECT * FROM links ORDER BY created_at DESC");
+  return res.rows;
+}
+
+// Counts the click and returns where to send the visitor, or null if the slug doesn't exist.
+export async function useLink(slug: string): Promise<string | null> {
+  const res = await db.query(
+    "UPDATE links SET clicks = clicks + 1 WHERE slug = $1 RETURNING destination",
+    [slug],
+  );
+  return res.rows[0]?.destination ?? null;
+}
+
+// Creates the link, or points an existing slug at a new destination.
+export async function saveLink(slug: string, destination: string) {
+  await db.query(
+    `INSERT INTO links (slug, destination) VALUES ($1, $2)
+     ON CONFLICT (slug) DO UPDATE SET destination = EXCLUDED.destination`,
+    [slug, destination],
+  );
+}
+
+export async function deleteLink(slug: string) {
+  await db.query("DELETE FROM links WHERE slug = $1", [slug]);
 }
