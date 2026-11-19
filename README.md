@@ -3,7 +3,7 @@
 EEHS Hack Club's link shortener: `eehshack.club/go/{slug}` redirects to wherever the slug points. Adapted from Hack Club's [hack.af](https://github.com/hackclub/hack.af).
 
 - **Add, change or delete links** at `eehshack.club/go/admin` (asks for `ADMIN_PASSWORD`; any username works).
-- **Unknown slugs** redirect to `FALLBACK_URL` (the club homepage by default).
+- **Unknown slugs** redirect to `NOT_FOUND_URL` (the website's 404 page by default). A bare `/go` goes to `FALLBACK_URL` (the homepage).
 - The `links` table is created automatically on startup.
 
 ## Running locally

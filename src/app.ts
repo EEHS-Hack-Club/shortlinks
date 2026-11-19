@@ -5,7 +5,8 @@ import { adminPage } from "./page.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const BASE_PATH = process.env.BASE_PATH ?? "/go"; // links live at eehshack.club/go/{slug}
-const FALLBACK_URL = process.env.FALLBACK_URL ?? "https://eehshack.club/"; // unknown slugs land here
+const FALLBACK_URL = process.env.FALLBACK_URL ?? "https://eehshack.club/"; // bare /go lands here
+const NOT_FOUND_URL = process.env.NOT_FOUND_URL ?? "https://eehshack.club/404"; // unknown slugs land here
 const PUBLIC_URL = process.env.PUBLIC_URL ?? `https://eehshack.club${BASE_PATH}/`; // shown in the admin portal
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 
@@ -76,7 +77,7 @@ router.get("/", (_req, res) => {
 
 router.get("/:slug", async (req, res) => {
   const destination = await useLink(req.params.slug.toLowerCase());
-  res.redirect(302, destination ?? FALLBACK_URL);
+  res.redirect(302, destination ?? NOT_FOUND_URL);
 });
 
 function isWebUrl(value: string) {
