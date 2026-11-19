@@ -6,6 +6,7 @@ import { adminPage } from "./page.ts";
 const PORT = Number(process.env.PORT ?? 3000);
 const BASE_PATH = process.env.BASE_PATH ?? "/go"; // links live at eehshack.club/go/{slug}
 const FALLBACK_URL = process.env.FALLBACK_URL ?? "https://eehshack.club/"; // unknown slugs land here
+const PUBLIC_URL = process.env.PUBLIC_URL ?? `https://eehshack.club${BASE_PATH}/`; // shown in the admin portal
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 
 const RESERVED = new Set(["admin", "ping"]);
@@ -37,9 +38,9 @@ function requirePassword(req: Request, res: Response, next: NextFunction) {
   res.status(401).send("Password required.");
 }
 
-async function renderAdmin(req: Request, res: Response, message?: { error?: string; ok?: string }) {
+async function renderAdmin(_req: Request, res: Response, message?: { error?: string; ok?: string }) {
   const links = await listLinks();
-  res.send(adminPage({ links, linkBase: `https://${req.get("host")}${BASE_PATH}/`, ...message }));
+  res.send(adminPage({ links, linkBase: PUBLIC_URL, ...message }));
 }
 
 router.get("/admin", requirePassword, async (req, res) => {

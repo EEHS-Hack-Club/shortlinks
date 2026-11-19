@@ -17,7 +17,7 @@ bun dev                # http://localhost:3000/go/admin
 
 ## Hosting
 
-Runs on Orchard in the Services project. The ingress sends `eehshack.club/go/` to this app, and everything else on `eehshack.club` still goes to the website.
+Runs on Orchard in the Services project. Orchard only allows one deployment per hostname, so the website's `Caddyfile` (in [EEHS-Hack-Club/website](https://github.com/EEHS-Hack-Club/website)) proxies `eehshack.club/go` and `/go/*` to this app's Orchard URL. Everything else on `eehshack.club` is still served by the website.
 
 ## License
 
