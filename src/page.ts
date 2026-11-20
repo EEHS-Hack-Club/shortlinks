@@ -3,6 +3,15 @@ import type { Link } from "./db.ts";
 const escape = (value: string) =>
   value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+const day = (date: Date) => new Date(date).toISOString().slice(0, 10);
+
+// "Added by X on date", plus "edited by Y on date" once someone has changed it.
+function changedBy(link: Link) {
+  const added = `Added by ${escape(link.created_by ?? "unknown")} on ${day(link.created_at)}`;
+  if (!link.updated_at) return added;
+  return `${added}<br>Edited by ${escape(link.updated_by ?? "unknown")} on ${day(link.updated_at)}`;
+}
+
 type Props = { links: Link[]; linkBase: string; admin: string; error?: string; ok?: string };
 
 export function adminPage({ links, linkBase, admin, error, ok }: Props) {
@@ -13,6 +22,7 @@ export function adminPage({ links, linkBase, admin, error, ok }: Props) {
         <td><a href="${escape(linkBase + link.slug)}">${escape(link.slug)}</a></td>
         <td class="dest"><a href="${escape(link.destination)}">${escape(link.destination)}</a></td>
         <td>${link.clicks}</td>
+        <td class="who-col">${changedBy(link)}</td>
         <td class="actions">
           <button type="button" onclick="edit(this)" data-slug="${escape(link.slug)}" data-dest="${escape(link.destination)}">Edit</button>
           <button type="button" onclick="navigator.clipboard.writeText(this.dataset.url)" data-url="${escape(linkBase + link.slug)}">Copy</button>
@@ -53,6 +63,7 @@ export function adminPage({ links, linkBase, admin, error, ok }: Props) {
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--muted); font-weight: 500; font-size: 14px; }
   .dest { word-break: break-all; }
+  .who-col { color: var(--muted); font-size: 14px; }
   .actions { display: flex; gap: 6px; white-space: nowrap; }
   .actions button { padding: 4px 10px; font-size: 14px; }
   a { color: inherit; }
@@ -73,8 +84,8 @@ ${error ? `<div class="msg error">${escape(error)}</div>` : ""}
 </form>
 <p class="hint">Saving a slug that already exists changes where it points.</p>
 <table>
-  <thead><tr><th>Slug</th><th>Destination</th><th>Clicks</th><th></th></tr></thead>
-  <tbody>${rows || `<tr><td colspan="4">No links yet.</td></tr>`}</tbody>
+  <thead><tr><th>Slug</th><th>Destination</th><th>Clicks</th><th>Added / edited by</th><th></th></tr></thead>
+  <tbody>${rows || `<tr><td colspan="5">No links yet.</td></tr>`}</tbody>
 </table>
 <script>
   function edit(button) {

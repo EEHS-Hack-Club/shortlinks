@@ -4,7 +4,8 @@ EEHS Hack Club's link shortener: `eehshack.club/go/{slug}` redirects to wherever
 
 - **Add, change or delete links** at `eehshack.club/go/admin`. You log in with your Hack Club account, and only emails listed in `ADMIN_EMAILS` get in. The Hack Club Auth app's redirect URI is `https://eehshack.club/go/auth/callback`.
 - **Unknown slugs** redirect to `NOT_FOUND_URL` (the website's 404 page by default). A bare `/go` goes to `FALLBACK_URL` (the homepage).
-- The `links` table is created automatically on startup.
+- **Who changed what:** the admin page shows who added and last edited each link. Every create, edit and delete is also recorded in the `link_history` table, including deleted links.
+- The `links` and `link_history` tables are created (and new columns added) automatically on startup.
 
 ## Running locally
 

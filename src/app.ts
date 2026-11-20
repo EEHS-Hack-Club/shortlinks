@@ -36,7 +36,7 @@ router.post("/admin", auth.requireAdmin, async (req, res) => {
   const slug = String(req.body.slug ?? "").trim().toLowerCase();
 
   if (req.body.action === "delete") {
-    await deleteLink(slug);
+    await deleteLink(slug, req.adminEmail!);
     return renderAdmin(req, res, { ok: `Deleted ${slug}.` });
   }
 
@@ -50,7 +50,7 @@ router.post("/admin", auth.requireAdmin, async (req, res) => {
     return renderAdmin(req, res, { error: "The destination must start with http:// or https://." });
   }
 
-  await saveLink(slug, destination);
+  await saveLink(slug, destination, req.adminEmail!);
   renderAdmin(req, res, { ok: `Saved ${BASE_PATH}/${slug}.` });
 });
 
