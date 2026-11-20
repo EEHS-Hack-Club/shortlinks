@@ -2,7 +2,7 @@
 
 EEHS Hack Club's link shortener: `eehshack.club/go/{slug}` redirects to wherever the slug points. Adapted from Hack Club's [hack.af](https://github.com/hackclub/hack.af).
 
-- **Add, change or delete links** at `eehshack.club/go/admin`. You log in with your Hack Club account, and only Slack IDs listed in `ADMIN_SLACK_IDS` get in. The Hack Club Auth app's redirect URI is `https://eehshack.club/go/auth/callback`.
+- **Add, change or delete links** at `eehshack.club/go/admin`. You log in with your Hack Club account, and only emails listed in `ADMIN_EMAILS` get in. The Hack Club Auth app's redirect URI is `https://eehshack.club/go/auth/callback`.
 - **Unknown slugs** redirect to `NOT_FOUND_URL` (the website's 404 page by default). A bare `/go` goes to `FALLBACK_URL` (the homepage).
 - The `links` table is created automatically on startup.
 

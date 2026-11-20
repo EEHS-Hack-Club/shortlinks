@@ -15,7 +15,7 @@ const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 const router = express.Router();
 router.use(express.urlencoded({ extended: false }));
 
-// The admin portal: log in with Hack Club, admins are listed by Slack ID.
+// The admin portal: log in with Hack Club, admins are listed by email.
 const auth = setupAuth(BASE_PATH, PUBLIC_URL);
 router.use(auth.router);
 
@@ -25,7 +25,7 @@ router.get("/ping", (_req, res) => {
 
 async function renderAdmin(req: Request, res: Response, message?: { error?: string; ok?: string }) {
   const links = await listLinks();
-  res.send(adminPage({ links, linkBase: PUBLIC_URL, admin: req.adminSlackId ?? "", ...message }));
+  res.send(adminPage({ links, linkBase: PUBLIC_URL, admin: req.adminEmail ?? "", ...message }));
 }
 
 router.get("/admin", auth.requireAdmin, async (req, res) => {

@@ -1,5 +1,5 @@
 // "Log in with Hack Club" for the admin portal, using Hack Club Auth (auth.hackclub.com).
-// Admins are whoever's Slack ID is listed in ADMIN_SLACK_IDS. Sessions are a signed cookie,
+// Admins are whoever's Hack Club account email is listed in ADMIN_EMAILS. Sessions are a signed cookie,
 // so there's nothing to store in the database.
 import express, { type NextFunction, type Request, type Response } from "express";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
@@ -8,8 +8,8 @@ const HCA_URL = process.env.HCA_URL ?? "https://auth.hackclub.com";
 const CLIENT_ID = process.env.HCA_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.HCA_CLIENT_SECRET ?? "";
 const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
-const ADMIN_SLACK_IDS = new Set(
-  (process.env.ADMIN_SLACK_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean),
+const ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_EMAILS ?? "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean),
 );
 const SESSION_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE = "shortlinks_session";
@@ -18,7 +18,7 @@ const STATE_COOKIE = "shortlinks_state";
 declare global {
   namespace Express {
     interface Request {
-      adminSlackId?: string;
+      adminEmail?: string;
     }
   }
 }
@@ -31,7 +31,7 @@ export function setupAuth(basePath: string, publicUrl: string) {
     !CLIENT_ID && "HCA_CLIENT_ID",
     !CLIENT_SECRET && "HCA_CLIENT_SECRET",
     !SESSION_SECRET && "SESSION_SECRET",
-    ADMIN_SLACK_IDS.size === 0 && "ADMIN_SLACK_IDS",
+    ADMIN_EMAILS.size === 0 && "ADMIN_EMAILS",
   ].filter(Boolean);
 
   router.get("/login", (_req, res) => {
@@ -45,7 +45,7 @@ export function setupAuth(basePath: string, publicUrl: string) {
       client_id: CLIENT_ID,
       redirect_uri: redirectUri,
       response_type: "code",
-      scope: "openid slack_id",
+      scope: "openid email",
       state,
     }).toString();
     res.redirect(302, url.toString());
@@ -62,15 +62,15 @@ export function setupAuth(basePath: string, publicUrl: string) {
     }
     if (typeof code !== "string") return res.status(400).send("Missing login code.");
 
-    const slackId = await slackIdFromCode(code, redirectUri);
-    if (!slackId) {
-      return res.status(502).send(`Couldn't get your Slack ID from Hack Club Auth. <a href="${basePath}/login">Try again</a>.`);
+    const email = await emailFromCode(code, redirectUri);
+    if (!email) {
+      return res.status(502).send(`Couldn't get your email from Hack Club Auth. <a href="${basePath}/login">Try again</a>.`);
     }
-    if (!ADMIN_SLACK_IDS.has(slackId)) {
-      return res.status(403).send(`Your Hack Club account (${escapeHtml(slackId)}) isn't a shortlinks admin. Ask an admin to add your Slack ID.`);
+    if (!ADMIN_EMAILS.has(email)) {
+      return res.status(403).send(`Your Hack Club account (${escapeHtml(email)}) isn't a shortlinks admin. Ask an admin to add your email.`);
     }
 
-    res.cookie(SESSION_COOKIE, sign(`${slackId}|${Date.now() + SESSION_MS}`), {
+    res.cookie(SESSION_COOKIE, sign(`${email}|${Date.now() + SESSION_MS}`), {
       ...cookieOptions,
       maxAge: SESSION_MS,
     });
@@ -84,9 +84,11 @@ export function setupAuth(basePath: string, publicUrl: string) {
 
   // Lets a request through only with a valid session for someone still on the allowlist.
   function requireAdmin(req: Request, res: Response, next: NextFunction) {
-    const [slackId, expires] = (verify(readCookie(req, SESSION_COOKIE)) ?? "").split("|");
-    if (slackId && Number(expires) > Date.now() && ADMIN_SLACK_IDS.has(slackId)) {
-      req.adminSlackId = slackId;
+    const session = verify(readCookie(req, SESSION_COOKIE)) ?? "";
+    const bar = session.lastIndexOf("|");
+    const email = session.slice(0, bar);
+    if (bar > 0 && Number(session.slice(bar + 1)) > Date.now() && ADMIN_EMAILS.has(email)) {
+      req.adminEmail = email;
       return next();
     }
     if (req.method === "GET") return res.redirect(302, `${basePath}/login`);
@@ -97,7 +99,7 @@ export function setupAuth(basePath: string, publicUrl: string) {
 }
 
 // Swaps the one-time login code for a token, then asks Hack Club Auth who it belongs to.
-async function slackIdFromCode(code: string, redirectUri: string): Promise<string | null> {
+async function emailFromCode(code: string, redirectUri: string): Promise<string | null> {
   try {
     const tokenRes = await fetch(new URL("/oauth/token", HCA_URL), {
       method: "POST",
@@ -119,9 +121,9 @@ async function slackIdFromCode(code: string, redirectUri: string): Promise<strin
     const meRes = await fetch(new URL("/api/v1/me", HCA_URL), {
       headers: { Authorization: `Bearer ${token.access_token}` },
     });
-    const me = (await meRes.json()) as { identity?: { slack_id?: string } };
+    const me = (await meRes.json()) as { identity?: { primary_email?: string } };
     if (!meRes.ok) console.error("Hack Club Auth /me failed:", meRes.status, me);
-    return me.identity?.slack_id ?? null;
+    return me.identity?.primary_email?.trim().toLowerCase() || null;
   } catch (error) {
     console.error("Hack Club Auth request failed:", error);
     return null;
