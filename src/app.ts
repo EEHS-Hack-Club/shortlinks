@@ -1,5 +1,5 @@
-import express, { type NextFunction, type Request, type Response } from "express";
-import { timingSafeEqual } from "node:crypto";
+import express, { type Request, type Response } from "express";
+import { setupAuth } from "./auth.ts";
 import { deleteLink, listLinks, saveLink, setupDatabase, useLink } from "./db.ts";
 import { adminPage } from "./page.ts";
 
@@ -8,47 +8,31 @@ const BASE_PATH = process.env.BASE_PATH ?? "/go"; // links live at eehshack.club
 const FALLBACK_URL = process.env.FALLBACK_URL ?? "https://eehshack.club/"; // bare /go lands here
 const NOT_FOUND_URL = process.env.NOT_FOUND_URL ?? "https://eehshack.club/404"; // unknown slugs land here
 const PUBLIC_URL = process.env.PUBLIC_URL ?? `https://eehshack.club${BASE_PATH}/`; // shown in the admin portal
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 
-const RESERVED = new Set(["admin", "ping"]);
+const RESERVED = new Set(["admin", "ping", "login", "logout", "auth"]);
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
 const router = express.Router();
 router.use(express.urlencoded({ extended: false }));
 
+// The admin portal: log in with Hack Club, admins are listed by Slack ID.
+const auth = setupAuth(BASE_PATH, PUBLIC_URL);
+router.use(auth.router);
+
 router.get("/ping", (_req, res) => {
   res.send("pong");
 });
 
-// The admin portal, protected by one shared password (any username works).
-function requirePassword(req: Request, res: Response, next: NextFunction) {
-  const [scheme, encoded] = (req.headers.authorization ?? "").split(" ");
-  const password = Buffer.from(encoded ?? "", "base64").toString().split(":").slice(1).join(":");
-  const given = Buffer.from(password);
-  const expected = Buffer.from(ADMIN_PASSWORD);
-
-  if (
-    ADMIN_PASSWORD &&
-    scheme === "Basic" &&
-    given.length === expected.length &&
-    timingSafeEqual(given, expected)
-  ) {
-    return next();
-  }
-  res.set("WWW-Authenticate", 'Basic realm="Shortlinks admin"');
-  res.status(401).send("Password required.");
-}
-
-async function renderAdmin(_req: Request, res: Response, message?: { error?: string; ok?: string }) {
+async function renderAdmin(req: Request, res: Response, message?: { error?: string; ok?: string }) {
   const links = await listLinks();
-  res.send(adminPage({ links, linkBase: PUBLIC_URL, ...message }));
+  res.send(adminPage({ links, linkBase: PUBLIC_URL, admin: req.adminSlackId ?? "", ...message }));
 }
 
-router.get("/admin", requirePassword, async (req, res) => {
+router.get("/admin", auth.requireAdmin, async (req, res) => {
   await renderAdmin(req, res);
 });
 
-router.post("/admin", requirePassword, async (req, res) => {
+router.post("/admin", auth.requireAdmin, async (req, res) => {
   const slug = String(req.body.slug ?? "").trim().toLowerCase();
 
   if (req.body.action === "delete") {
@@ -59,7 +43,7 @@ router.post("/admin", requirePassword, async (req, res) => {
   const destination = String(req.body.destination ?? "").trim();
   if (!SLUG_PATTERN.test(slug) || RESERVED.has(slug)) {
     return renderAdmin(req, res, {
-      error: "Slugs can only use lowercase letters, numbers, - and _ (and can't be \"admin\" or \"ping\").",
+      error: "Slugs can only use lowercase letters, numbers, - and _ (and can't be a reserved word like \"admin\").",
     });
   }
   if (!isWebUrl(destination)) {

@@ -3,9 +3,9 @@ import type { Link } from "./db.ts";
 const escape = (value: string) =>
   value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-type Props = { links: Link[]; linkBase: string; error?: string; ok?: string };
+type Props = { links: Link[]; linkBase: string; admin: string; error?: string; ok?: string };
 
-export function adminPage({ links, linkBase, error, ok }: Props) {
+export function adminPage({ links, linkBase, admin, error, ok }: Props) {
   const rows = links
     .map(
       (link) => `
@@ -35,7 +35,10 @@ export function adminPage({ links, linkBase, error, ok }: Props) {
 <style>
   :root { color-scheme: light dark; --accent: #ec3750; --muted: #8492a6; --line: #8492a633; }
   body { font: 16px/1.5 system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px 16px; }
-  h1 { margin: 0 0 16px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+  h1 { margin: 0; }
+  .who { color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .who button { padding: 4px 10px; font-size: 14px; }
   form.add { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
   input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
   .slug { display: flex; align-items: center; gap: 4px; }
@@ -56,7 +59,10 @@ export function adminPage({ links, linkBase, error, ok }: Props) {
 </style>
 </head>
 <body>
-<h1>Shortlinks</h1>
+<header>
+  <h1>Shortlinks</h1>
+  <form class="who" method="post" action="logout">Logged in as ${escape(admin)} <button>Log out</button></form>
+</header>
 ${ok ? `<div class="msg ok">${escape(ok)}</div>` : ""}
 ${error ? `<div class="msg error">${escape(error)}</div>` : ""}
 <form class="add" method="post">
